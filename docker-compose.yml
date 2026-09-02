@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: mypassword
       POSTGRES_DB: portfolio-pulse
     ports:
-      - "5432:5432"
+      - "5460:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
