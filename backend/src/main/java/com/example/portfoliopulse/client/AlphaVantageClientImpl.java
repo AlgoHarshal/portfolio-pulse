@@ -50,25 +50,31 @@ public class AlphaVantageClientImpl implements AlphaVantageClient {
 
         try {
             Map response = restTemplate.getForObject(url, Map.class);
+            logger.info("Raw response from Alpha Vantage: {}", response);
+            
             if (response != null && response.containsKey("Global Quote")) {
-                Map<String, String> globalQuote = (Map<String, String>) response.get("Global Quote");
-                if (globalQuote != null && globalQuote.containsKey("05. price")) {
-                    BigDecimal price = new BigDecimal(globalQuote.get("05. price"));
-                    
-                    // Persist to PriceHistory
-                    PriceHistory history = new PriceHistory();
-                    history.setTickerSymbol(ticker);
-                    history.setPrice(price);
-                    history.setRecordedAt(LocalDateTime.now());
-                    history.setSource("alphavantage");
-                    priceHistoryRepository.save(history);
-                    
-                    return price;
+                Object globalQuoteObj = response.get("Global Quote");
+                if (globalQuoteObj instanceof Map) {
+                    Map<?, ?> globalQuote = (Map<?, ?>) globalQuoteObj;
+                    if (globalQuote.containsKey("05. price")) {
+                        Object priceObj = globalQuote.get("05. price");
+                        BigDecimal price = new BigDecimal(priceObj.toString());
+                        
+                        // Persist to PriceHistory
+                        PriceHistory history = new PriceHistory();
+                        history.setTickerSymbol(ticker);
+                        history.setPrice(price);
+                        history.setRecordedAt(LocalDateTime.now());
+                        history.setSource("alphavantage");
+                        priceHistoryRepository.save(history);
+                        
+                        return price;
+                    }
                 }
             }
-            throw new RuntimeException("Invalid response format from Alpha Vantage");
+            throw new RuntimeException("Invalid response format from Alpha Vantage. Missing 'Global Quote' or '05. price'.");
         } catch (Exception e) {
-            logger.error("Error fetching from Alpha Vantage: {}", e.getMessage());
+            logger.error("Error fetching from Alpha Vantage: {}", e.getMessage(), e);
             throw e;
         }
     }
