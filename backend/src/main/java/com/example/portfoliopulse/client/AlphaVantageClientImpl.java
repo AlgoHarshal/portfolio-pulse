@@ -84,8 +84,11 @@ public class AlphaVantageClientImpl implements AlphaVantageClient {
      * or if the primary method throws an exception.
      */
     public BigDecimal fallbackPrice(String ticker, Throwable t) {
-        logger.warn("Alpha Vantage fallback triggered for {}. Reason: {}", ticker, t.getMessage());
-        logger.warn("This usually occurs if the portfolio has >5 distinct tickers and we exceeded the 5 calls/min limit, or the API is down.");
+        if (t instanceof io.github.resilience4j.ratelimiter.RequestNotPermitted) {
+            logger.warn("RATE LIMITER REJECTED CALL for {}. We exceeded the 5 calls/min limit.", ticker);
+        } else {
+            logger.warn("Alpha Vantage fallback triggered for {}. Reason: {}", ticker, t.getMessage());
+        }
 
         Optional<PriceHistory> lastKnownPrice = priceHistoryRepository.findTopByTickerSymbolOrderByRecordedAtDesc(ticker);
         
