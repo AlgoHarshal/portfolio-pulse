@@ -6,7 +6,7 @@ A full-stack application for tracking your investment portfolio.
 
 ### Environment Variables
 
-The backend uses `spring-dotenv` to automatically load environment variables from `backend/.env`. 
+The backend uses Spring Boot's native `spring.config.import` feature to automatically load environment variables from `backend/.env`.
 
 To set up your local environment:
 1. Create a `backend/.env` file.

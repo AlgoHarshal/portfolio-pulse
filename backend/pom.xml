@@ -94,12 +94,6 @@
             <version>0.12.5</version>
             <scope>runtime</scope>
         </dependency>
-        <!-- Spring Dotenv for loading .env files locally -->
-        <dependency>
-            <groupId>me.paulschwarz</groupId>
-            <artifactId>spring-dotenv</artifactId>
-            <version>4.0.0</version>
-        </dependency>
 
         <!-- Caching & Rate Limiting (Phase 4) -->
         <dependency>
