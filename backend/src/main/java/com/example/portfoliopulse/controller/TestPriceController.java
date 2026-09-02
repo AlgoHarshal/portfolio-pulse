@@ -28,7 +28,8 @@ public class TestPriceController {
         
         return ResponseEntity.ok(Map.of(
             "ticker", ticker.toUpperCase(),
-            "price", price,
+            "price", price == null ? 0 : price,
+            "priceAvailable", price != null,
             "durationMs", endTime - startTime
         ));
     }

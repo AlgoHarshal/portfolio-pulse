@@ -37,7 +37,7 @@ public class AlphaVantageClientImpl implements AlphaVantageClient {
     }
 
     @Override
-    @Cacheable(value = "currentPrices", key = "#ticker")
+    @Cacheable(value = "currentPrices", key = "#ticker", unless = "#result == null")
     @RateLimiter(name = "alphaVantage", fallbackMethod = "fallbackPrice")
     public BigDecimal fetchCurrentPrice(String ticker) {
         logger.info("Fetching real-time price from Alpha Vantage for {}", ticker);
@@ -97,7 +97,7 @@ public class AlphaVantageClientImpl implements AlphaVantageClient {
             return lastKnownPrice.get().getPrice();
         }
 
-        logger.error("No historical price found in database for {}. Returning 0 as absolute fallback.", ticker);
-        return BigDecimal.ZERO;
+        logger.error("No historical price found in database for {}. Returning null.", ticker);
+        return null;
     }
 }
