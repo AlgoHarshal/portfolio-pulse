@@ -35,13 +35,19 @@ public class PortfolioService {
         List<Holding> holdings = holdingRepository.findAllByUserId(user.getId());
 
         // Deduplicate tickers to ensure we only make 1 rate-limited call per unique ticker
-        Map<String, BigDecimal> livePrices = holdings.stream()
+        Map<String, BigDecimal> livePrices = new java.util.HashMap<>();
+        holdings.stream()
                 .map(Holding::getTickerSymbol)
                 .distinct()
-                .collect(Collectors.toMap(
-                        ticker -> ticker,
-                        alphaVantageClient::fetchCurrentPrice
-                ));
+                .forEach(ticker -> {
+                    try {
+                        BigDecimal price = alphaVantageClient.fetchCurrentPrice(ticker);
+                        livePrices.put(ticker, price); // HashMap allows null values, Collectors.toMap throws NPE
+                    } catch (Exception e) {
+                        // Safety net in case of unhandled exceptions escaping the AOP fallback
+                        livePrices.put(ticker, null);
+                    }
+                });
 
         BigDecimal totalCurrentValue = BigDecimal.ZERO;
         BigDecimal totalCostBasis = BigDecimal.ZERO;
