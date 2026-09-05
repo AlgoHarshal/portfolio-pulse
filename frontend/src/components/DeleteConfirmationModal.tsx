@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import type { Holding } from './HoldingsTable';
+import type { HoldingSummary } from '../api/portfolioApi';
 
 interface DeleteConfirmationModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => Promise<void>;
-    holding: Holding | null;
+    holding: HoldingSummary | null;
 }
 
 const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ 

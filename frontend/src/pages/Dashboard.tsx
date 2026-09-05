@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { PlusCircle, AlertCircle } from 'lucide-react';
 import HoldingsTable from '../components/HoldingsTable';
-import type { Holding } from '../components/HoldingsTable';
+import { getPortfolioSummary } from '../api/portfolioApi';
+import type { PortfolioSummary, HoldingSummary } from '../api/portfolioApi';
 import HoldingModal from '../components/HoldingModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 
@@ -12,15 +13,16 @@ const Dashboard: React.FC = () => {
     const { email, logout } = useAuth();
     const navigate = useNavigate();
 
-    const [holdings, setHoldings] = useState<Holding[]>([]);
+    const [summary, setSummary] = useState<PortfolioSummary | null>(null);
+    const [holdings, setHoldings] = useState<HoldingSummary[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingHolding, setEditingHolding] = useState<Holding | null>(null);
+    const [editingHolding, setEditingHolding] = useState<HoldingSummary | null>(null);
     
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [deletingHolding, setDeletingHolding] = useState<Holding | null>(null);
+    const [deletingHolding, setDeletingHolding] = useState<HoldingSummary | null>(null);
 
     const handleLogout = () => {
         logout();
@@ -31,10 +33,11 @@ const Dashboard: React.FC = () => {
         try {
             setIsLoading(true);
             setError('');
-            const response = await api.get('/holdings');
-            setHoldings(response.data);
+            const data = await getPortfolioSummary();
+            setSummary(data);
+            setHoldings(data.holdings);
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to fetch holdings');
+            setError(err.response?.data?.message || 'Failed to fetch portfolio summary');
         } finally {
             setIsLoading(false);
         }
@@ -44,7 +47,7 @@ const Dashboard: React.FC = () => {
         fetchHoldings();
     }, []);
 
-    const handleSaveHolding = async (holdingData: Partial<Holding>) => {
+    const handleSaveHolding = async (holdingData: Partial<HoldingSummary>) => {
         if (holdingData.id) {
             await api.put(`/holdings/${holdingData.id}`, holdingData);
         } else {
@@ -64,12 +67,12 @@ const Dashboard: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const openEditModal = (holding: Holding) => {
+    const openEditModal = (holding: HoldingSummary) => {
         setEditingHolding(holding);
         setIsModalOpen(true);
     };
 
-    const openDeleteModal = (holding: Holding) => {
+    const openDeleteModal = (holding: HoldingSummary) => {
         setDeletingHolding(holding);
         setIsDeleteModalOpen(true);
     };
@@ -104,6 +107,33 @@ const Dashboard: React.FC = () => {
                     <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded flex items-start">
                         <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5" />
                         <p className="text-red-700">{error}</p>
+                    </div>
+                )}
+
+                {summary?.warningMessage && (
+                    <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded flex items-start shadow-sm">
+                        <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
+                        <p className="text-yellow-700 font-medium">{summary.warningMessage}</p>
+                    </div>
+                )}
+
+                {summary && holdings.length > 0 && !isLoading && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-center">
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Value</h3>
+                            <span className="text-4xl font-bold text-gray-900">${summary.totalCurrentValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-center">
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Cost</h3>
+                            <span className="text-4xl font-bold text-gray-900">${summary.totalCostBasis.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-center">
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Gain/Loss</h3>
+                            <span className={`text-4xl font-bold ${summary.totalAbsoluteGain >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {summary.totalAbsoluteGain >= 0 ? '+' : ''}${summary.totalAbsoluteGain.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} 
+                                <span className="text-2xl ml-2 opacity-80">({summary.totalPercentageGain >= 0 ? '+' : ''}{summary.totalPercentageGain.toFixed(2)}%)</span>
+                            </span>
+                        </div>
                     </div>
                 )}
 

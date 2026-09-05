@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import type { Holding } from './HoldingsTable';
+import type { HoldingSummary } from '../api/portfolioApi';
 
 interface HoldingModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (holding: Partial<Holding>) => Promise<void>;
-    initialData?: Holding | null;
+    onSubmit: (holdingData: Partial<HoldingSummary>) => void;
+    initialData?: HoldingSummary | null;
 }
 
 const HoldingModal: React.FC<HoldingModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {

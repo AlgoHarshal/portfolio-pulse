@@ -1,23 +1,14 @@
 import React, { useState } from 'react';
-import { Edit2, Trash2, ArrowUpDown } from 'lucide-react';
-
-export interface Holding {
-    id: string;
-    tickerSymbol: string;
-    assetType: 'STOCK' | 'ETF' | 'MUTUAL_FUND';
-    quantity: number;
-    purchasePrice: number;
-    purchaseDate: string;
-    sector: string | null;
-}
+import { Edit2, Trash2, ArrowUpDown, AlertCircle } from 'lucide-react';
+import type { HoldingSummary } from '../api/portfolioApi';
 
 interface HoldingsTableProps {
-    holdings: Holding[];
-    onEdit: (holding: Holding) => void;
-    onDelete: (holding: Holding) => void;
+    holdings: HoldingSummary[];
+    onEdit: (holding: HoldingSummary) => void;
+    onDelete: (holding: HoldingSummary) => void;
 }
 
-type SortField = 'tickerSymbol' | 'quantity' | 'purchasePrice' | 'purchaseDate' | 'assetType';
+type SortField = 'tickerSymbol' | 'quantity' | 'purchasePrice' | 'purchaseDate' | 'assetType' | 'currentValue' | 'percentageGain';
 type SortOrder = 'asc' | 'desc';
 
 const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings, onEdit, onDelete }) => {
@@ -37,8 +28,8 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings, onEdit, onDelet
         const aValue = a[sortField];
         const bValue = b[sortField];
         
-        if (aValue === null) return sortOrder === 'asc' ? 1 : -1;
-        if (bValue === null) return sortOrder === 'asc' ? -1 : 1;
+        if (aValue === undefined || aValue === null) return sortOrder === 'asc' ? 1 : -1;
+        if (bValue === undefined || bValue === null) return sortOrder === 'asc' ? -1 : 1;
         
         if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
         if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
@@ -52,35 +43,23 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings, onEdit, onDelet
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
-                        <th 
-                            onClick={() => handleSort('tickerSymbol')}
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                        >
+                        <th onClick={() => handleSort('tickerSymbol')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                             Ticker <SortIcon />
                         </th>
-                        <th 
-                            onClick={() => handleSort('assetType')}
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                        >
-                            Asset Type <SortIcon />
-                        </th>
-                        <th 
-                            onClick={() => handleSort('quantity')}
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                        >
+                        <th onClick={() => handleSort('quantity')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                             Quantity <SortIcon />
                         </th>
-                        <th 
-                            onClick={() => handleSort('purchasePrice')}
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                        >
+                        <th onClick={() => handleSort('purchasePrice')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                             Avg Price <SortIcon />
                         </th>
-                        <th 
-                            onClick={() => handleSort('purchaseDate')}
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                        >
-                            Purchase Date <SortIcon />
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Current Price
+                        </th>
+                        <th onClick={() => handleSort('currentValue')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                            Total Value <SortIcon />
+                        </th>
+                        <th onClick={() => handleSort('percentageGain')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                            Gain/Loss <SortIcon />
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Actions
@@ -92,9 +71,7 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings, onEdit, onDelet
                         <tr key={holding.id} className="hover:bg-gray-50 transition-colors duration-150">
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                 {holding.tickerSymbol}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {holding.assetType}
+                                <span className="ml-2 text-xs text-gray-400 font-normal">{holding.assetType}</span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {Number(holding.quantity).toFixed(4)}
@@ -102,8 +79,27 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings, onEdit, onDelet
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 ${Number(holding.purchasePrice).toFixed(2)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {new Date(holding.purchaseDate).toLocaleDateString()}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                {holding.priceAvailable ? (
+                                    <span className="text-gray-900 font-medium">${Number(holding.currentPrice).toFixed(2)}</span>
+                                ) : (
+                                    <span className="text-gray-400 flex items-center" title="Price currently unavailable">
+                                        <AlertCircle className="w-4 h-4 mr-1" /> N/A
+                                    </span>
+                                )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                                {holding.priceAvailable ? `$${Number(holding.currentValue).toFixed(2)}` : '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                {holding.priceAvailable ? (
+                                    <span className={`font-semibold ${Number(holding.absoluteGain) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {Number(holding.absoluteGain) >= 0 ? '+' : ''}
+                                        ${Number(holding.absoluteGain).toFixed(2)} ({Number(holding.percentageGain) >= 0 ? '+' : ''}{Number(holding.percentageGain).toFixed(2)}%)
+                                    </span>
+                                ) : (
+                                    <span className="text-gray-400">-</span>
+                                )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button 
